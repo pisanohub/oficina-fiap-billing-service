@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: billing-service
+  namespace: oficina-ms
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: billing-service
+
+  template:
+    metadata:
+      labels:
+        app: billing-service
+
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+
+        - name: billing-service
+
+          image: IMAGE_NAME
+
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8080
+              name: http
+
+          envFrom:
+
+            - configMapRef:
+                name: billing-service-config
+
+            - secretRef:
+                name: billing-service-secret
+
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+          readinessProbe:
+
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+
+            initialDelaySeconds: 240
+            periodSeconds: 40
+
+          livenessProbe:
+
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+
+            initialDelaySeconds: 360
+            periodSeconds: 40
