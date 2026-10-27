@@ -1,0 +1,15 @@
+# Perfil de desenvolvimento: não habilitar no Kubernetes.
+server:
+  address: 127.0.0.1
+  port: 8082
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://127.0.0.1:5543/billing_service}
+    username: ${SPRING_DATASOURCE_USERNAME:billing_local}
+    password: ${SPRING_DATASOURCE_PASSWORD:billing_local}
+
+management:
+  endpoint:
+    health:
+      show-details: never
