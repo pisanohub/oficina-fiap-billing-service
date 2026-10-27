@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Billing - orçamento local",
-    "description": "Executar com perfil local, sem AWS/JWT. Dados fictícios; contrato SQS ainda pendente.",
+    "description": "Perfil local, sem AWS/JWT. Requisições 1-3 testam orçamento. A requisição 4 chama Mercado Pago somente com MERCADOPAGO_ENABLED=true e token de Teste configurado no backend. Criar checkout não confirma pagamento.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -42,6 +42,27 @@
         "body": {"mode": "raw", "raw": "{\"comandoId\":\"{{$guid}}\",\"ordemId\":1,\"clienteId\":1,\"itens\":[{\"referencia\":\"teste\",\"tipo\":\"SERVICO\",\"descricao\":\"Teste\",\"quantidade\":0,\"valorUnitario\":10.00}]}", "options": {"raw": {"language": "json"}}}
       },
       "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('HTTP 400', () => pm.response.to.have.status(400));"]}}]
+    },
+    {
+      "name": "4 - Criar preferência Mercado Pago (token de TESTE no backend)",
+      "request": {
+        "method": "POST",
+        "description": "Sem corpo: os preços vêm do orçamento salvo. Repetição de preferência criada devolve o link salvo. Resultado incerto bloqueia repetição automática.",
+        "url": "{{baseUrl}}/internal/orcamentos/{{orcamentoId}}/preferencia"
+      },
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+        "pm.test('Preferência criada ou já existente', () => pm.response.to.have.status(200));",
+        "if (pm.response.code === 200) {",
+        "  const body = pm.response.json();",
+        "  pm.test('Não é confirmação de pagamento', () => pm.expect(body.estado).to.eql('CRIADA'));",
+        "  pm.test('Identificador presente', () => pm.expect(body.preferenciaId).to.be.a('string').and.not.empty);",
+        "}"
+      ]}}]
+    },
+    {
+      "name": "5 - Consultar estado da preferência",
+      "request": {"method": "GET", "url": "{{baseUrl}}/internal/orcamentos/{{orcamentoId}}/preferencia"},
+      "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["pm.test('HTTP 200', () => pm.response.to.have.status(200));"]}}]
     }
   ]
 }
