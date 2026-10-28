@@ -8,6 +8,23 @@ Já é possível gerar, calcular e consultar orçamento no banco do Billing, com
 de itens e proteção contra repetição de comando. Os preços ficam registrados como snapshot.
 O status inicial é `AGUARDANDO_APROVACAO`; ainda não há cobrança nem aprovação implementadas.
 
+## Segunda etapa: Checkout Pro / Preferences API
+
+É possível criar uma preferência a partir do orçamento salvo, persistir o ID/link e
+reutilizar o resultado sem novo envio. Geração de checkout **não confirma pagamento**.
+Os POST/GET `/internal/orcamentos/{id}/preferencia` só existem no perfil `local`.
+
+Passo a passo completo: [Integração Mercado Pago](docs/mercado-pago-checkout-pro.md).
+
+Na configuração do IntelliJ, mantenha Java 21, `--spring.profiles.active=local` e adicione
+as variáveis de ambiente `MERCADOPAGO_ENABLED=true` e `MERCADOPAGO_ACCESS_TOKEN` com
+o token do ambiente **Teste**. O token não deve ser colocado no Postman nem no código.
+A habilitação é falsa por padrão; o orçamento local segue funcionando sem credencial.
+
+Reimporte a collection e execute **4 - Criar preferência** e **5 - Consultar estado**.
+O POST não recebe preço no corpo. Um resultado incerto bloqueia novas tentativas até
+reconciliação; não há retry automático nem confirmação/webhook de pagamento nesta etapa.
+
 Estrutura em camadas: `domain/model`, `application/usecase`, `application/port/out`,
 `adapter/out/persistence`, `adapter/in/web` e `config`.
 Detalhes e contratos pendentes: [Primeira etapa](docs/primeira-etapa-orcamentos.md).
@@ -147,9 +164,8 @@ Os dados ficam no volume local para a próxima execução.
 A geração/consulta local já funciona. Integrações externas continuam pendentes:
 
 - Aprovação/reprovação, revisões e cancelamento; domínio de pagamento e estorno.
-- Integração real com o **Mercado Pago (sandbox)** — hoje existe apenas a dependência
-  do WebClient e a propriedade `mercadopago.access-token` configurada via variável de
-  ambiente, sem nenhuma chamada implementada ainda.
+- Confirmação real do pagamento, webhook, reconciliação e reembolso no Mercado Pago.
+  A criação da preferência já tem adapter HTTP; a validação na conta de teste é manual.
 - Publicação/consumo das filas SQS da Saga (comandos `GerarOrcamento` /
   `ProcessarPagamento`, eventos `OrcamentoGerado` / `PagamentoConfirmado` /
   `PagamentoRecusado` / `PagamentoEstornado`).
