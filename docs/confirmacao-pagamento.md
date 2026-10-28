@@ -114,9 +114,8 @@ HTTP local com credencial fictícia e H2 em modo PostgreSQL. O motor Docker não
 disponível nesta execução; a tabela/lock de pagamentos ainda não foi validada contra
 PostgreSQL real. Não foi feita consulta à conta real do usuário durante a implementação.
 
-Esta branch parte de `feat/mercado-pago-preferencia`, porque a criação da preferência
-ainda não constava da main na conferência inicial. Integrar a preferência primeiro ou
-revisar a confirmação com a branch anterior como base para separar as entregas.
+A preferência foi integrada à main pelo PR #2 durante esta entrega. A branch de
+confirmação incorporou essa main sem conflitos; a revisão pode usar main como base.
 
 - https://www.mercadopago.com.br/developers/pt/reference/online-payments/checkout-pro-preferences/get-payment/get
 - https://www.mercadopago.com.br/developers/pt/docs/checkout-api-payments/response-handling/query-results
