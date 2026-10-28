@@ -22,5 +22,9 @@ class EntradaLocalDesabilitadaTest {
                 .andExpect(status().isNotFound());
         mvc.perform(get("/internal/orcamentos/11111111-1111-4111-8111-111111111111/preferencia"))
                 .andExpect(status().isNotFound());
+        mvc.perform(post("/internal/orcamentos/11111111-1111-4111-8111-111111111111/pagamentos/123/verificar"))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/internal/orcamentos/11111111-1111-4111-8111-111111111111/pagamentos"))
+                .andExpect(status().isNotFound());
     }
 }

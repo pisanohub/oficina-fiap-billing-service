@@ -23,7 +23,20 @@ A habilitação é falsa por padrão; o orçamento local segue funcionando sem c
 
 Reimporte a collection e execute **4 - Criar preferência** e **5 - Consultar estado**.
 O POST não recebe preço no corpo. Um resultado incerto bloqueia novas tentativas até
-reconciliação; não há retry automático nem confirmação/webhook de pagamento nesta etapa.
+reconciliação; não há retry automático. A confirmação manual está descrita na etapa seguinte.
+
+## Terceira etapa: verificar e registrar pagamento
+
+O Billing consulta a operação na API do Mercado Pago, confere orçamento/valor/moeda
+e registra o resultado em `pagamentos`, sem duplicar a mesma operação. A consulta
+reconhece aprovação, pendência, recusa e estorno; não realiza nova cobrança ou reembolso.
+
+Guia: [Confirmação de pagamento](docs/confirmacao-pagamento.md).
+Reimporte a collection e preencha `pagamentoId` com o número da operação do checkout
+e `orcamentoId` com o orçamento correspondente. Execute **6 - Verificar na API e registrar
+pagamento** e **7 - Listar pagamentos**. Reutiliza as variáveis de ambiente da etapa 2.
+`confirmado=true` indica pagamento aprovado sem estorno na resposta validada.
+Não altera a OS nem publica SQS; webhook e fluxo da Saga continuam pendentes.
 
 Estrutura em camadas: `domain/model`, `application/usecase`, `application/port/out`,
 `adapter/out/persistence`, `adapter/in/web` e `config`.
@@ -164,8 +177,8 @@ Os dados ficam no volume local para a próxima execução.
 A geração/consulta local já funciona. Integrações externas continuam pendentes:
 
 - Aprovação/reprovação, revisões e cancelamento; domínio de pagamento e estorno.
-- Confirmação real do pagamento, webhook, reconciliação e reembolso no Mercado Pago.
-  A criação da preferência já tem adapter HTTP; a validação na conta de teste é manual.
+- Webhook, reconciliação e reembolso no Mercado Pago. Criação de preferência e consulta
+  manual do pagamento já possuem adapters HTTP; validação na conta de teste é manual.
 - Publicação/consumo das filas SQS da Saga (comandos `GerarOrcamento` /
   `ProcessarPagamento`, eventos `OrcamentoGerado` / `PagamentoConfirmado` /
   `PagamentoRecusado` / `PagamentoEstornado`).

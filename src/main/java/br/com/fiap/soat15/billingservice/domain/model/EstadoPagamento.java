@@ -1,0 +1,6 @@
+package br.com.fiap.soat15.billingservice.domain.model;
+
+public enum EstadoPagamento {
+    APROVADO, PENDENTE, EM_PROCESSAMENTO, AUTORIZADO, RECUSADO, CANCELADO,
+    PARCIALMENTE_ESTORNADO, ESTORNADO, CONTESTADO, EM_MEDIACAO, DESCONHECIDO
+}
