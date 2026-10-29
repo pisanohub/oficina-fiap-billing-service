@@ -25,11 +25,35 @@ public class VerificarPagamentoUseCase {
 
     public Pagamento executar(UUID orcamentoId, String pagamentoId) {
         PagamentoConsultado.validarId(pagamentoId);
+        validarOrcamento(orcamentoId);
+        return registrar(orcamentoId, pagamentoId, gateway.consultar(pagamentoId));
+    }
+
+    /** O vínculo vem da API autenticada do provedor, nunca do corpo do webhook. */
+    public Pagamento executarNotificacao(String pagamentoId) {
+        PagamentoConsultado.validarId(pagamentoId);
+        PagamentoConsultado resposta = gateway.consultar(pagamentoId);
+        UUID orcamentoId;
+        try {
+            orcamentoId = UUID.fromString(resposta.referenciaExterna());
+        } catch (IllegalArgumentException ex) {
+            throw new PagamentoIncompativelException("Pagamento sem referência válida de orçamento do Billing.");
+        }
+        return registrar(orcamentoId, pagamentoId, resposta);
+    }
+
+    private void validarOrcamento(UUID orcamentoId) {
+        consultar.executar(orcamentoId);
+        if (preferencias.buscar(orcamentoId).filter(p -> p.estado() == EstadoPreferencia.CRIADA).isEmpty()) {
+            throw new PagamentoIncompativelException("O orçamento ainda não tem preferência criada e registrada.");
+        }
+    }
+
+    private Pagamento registrar(UUID orcamentoId, String pagamentoId, PagamentoConsultado resposta) {
         Orcamento orcamento = consultar.executar(orcamentoId);
         if (preferencias.buscar(orcamentoId).filter(p -> p.estado() == EstadoPreferencia.CRIADA).isEmpty()) {
             throw new PagamentoIncompativelException("O orçamento ainda não tem preferência criada e registrada.");
         }
-        PagamentoConsultado resposta = gateway.consultar(pagamentoId);
         if (!pagamentoId.equals(resposta.id())) {
             throw new IntegracaoPagamentoException("Provedor retornou outra operação financeira.", false, false);
         }

@@ -16,7 +16,7 @@ Os POST/GET `/internal/orcamentos/{id}/preferencia` só existem no perfil `local
 
 Passo a passo completo: [Integração Mercado Pago](docs/mercado-pago-checkout-pro.md).
 
-Na configuração do IntelliJ, mantenha Java 21, `--spring.profiles.active=local` e adicione
+Na configuração do IntelliJ, mantenha Java 21, campo **Active profiles** como `local` e adicione
 as variáveis de ambiente `MERCADOPAGO_ENABLED=true` e `MERCADOPAGO_ACCESS_TOKEN` com
 o token do ambiente **Teste**. O token não deve ser colocado no Postman nem no código.
 A habilitação é falsa por padrão; o orçamento local segue funcionando sem credencial.
@@ -171,14 +171,33 @@ Detalhes e limitações: [resultado de validação](docs/primeira-etapa-orcament
 Para encerrar, use `Ctrl+C` no aplicativo e `docker compose stop billing-db`.
 Os dados ficam no volume local para a próxima execução.
 
+## Quarta etapa: webhook autenticado e inbox durável
+
+O Mercado Pago pode iniciar automaticamente a verificação do pagamento pela rota
+`POST /webhooks/mercadopago?data.id=...`. Validamos HMAC-SHA256 e timestamp; o aviso é
+salvo antes do HTTP 200. Um worker consulta a API e reutiliza as validações financeiras,
+com retries limitados e proteção contra duplicidade/queda durante o processamento.
+
+A rota é **desabilitada por padrão** e exige `MERCADOPAGO_WEBHOOK_ENABLED=true` e
+`MERCADOPAGO_WEBHOOK_SECRET`, além do token/integração já configurados. O segredo do
+webhook vem do painel, **não é** o Access Token. Não adicionar credenciais ao Git.
+
+Para demonstrar por túnel HTTPS, use somente o perfil `webhook-demo` (porta 8083),
+sem `local`: as entradas internas de teste não ficam expostas. Não abra túnel para 8082.
+Nenhum túnel, recurso AWS ou deploy é iniciado automaticamente.
+
+Passo a passo e limites: [Webhook Mercado Pago](docs/webhook-mercado-pago.md).
+**200 é recebimento do aviso, não confirmação financeira**; confira também a inbox e o pagamento.
+Não altera a OS nem publica eventos da Saga neste incremento.
+
 ## Status
 
 **Primeira etapa de orçamento implementada sobre o esqueleto do Pedro.**
 A geração/consulta local já funciona. Integrações externas continuam pendentes:
 
 - Aprovação/reprovação, revisões e cancelamento; domínio de pagamento e estorno.
-- Webhook, reconciliação e reembolso no Mercado Pago. Criação de preferência e consulta
-  manual do pagamento já possuem adapters HTTP; validação na conta de teste é manual.
+- Reconciliação operacional e reembolso no Mercado Pago. Preferência, consulta manual e
+  webhook autenticado com inbox já possuem implementação; validação externa é manual.
 - Publicação/consumo das filas SQS da Saga (comandos `GerarOrcamento` /
   `ProcessarPagamento`, eventos `OrcamentoGerado` / `PagamentoConfirmado` /
   `PagamentoRecusado` / `PagamentoEstornado`).

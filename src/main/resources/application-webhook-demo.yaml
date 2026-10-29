@@ -1,0 +1,25 @@
+# Demonstração do webhook por túnel HTTPS: NÃO combinar com o perfil local.
+server:
+  address: 127.0.0.1
+  port: 8083
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://127.0.0.1:5543/billing_service}
+    username: ${SPRING_DATASOURCE_USERNAME:billing_local}
+    password: ${SPRING_DATASOURCE_PASSWORD:billing_local}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
