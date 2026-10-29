@@ -27,3 +27,7 @@ mercadopago:
   enabled: ${MERCADOPAGO_ENABLED:false}
   access-token: ${MERCADOPAGO_ACCESS_TOKEN:}
   timeout: 10s
+  webhook:
+    enabled: ${MERCADOPAGO_WEBHOOK_ENABLED:false}
+    secret: ${MERCADOPAGO_WEBHOOK_SECRET:}
+    tolerance: ${MERCADOPAGO_WEBHOOK_TOLERANCE:5m}

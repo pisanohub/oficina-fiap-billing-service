@@ -8,3 +8,10 @@ spring:
     hibernate:
       ddl-auto: create-drop
     show-sql: false
+
+# Padrões offline; os testes de webhook sobrescrevem a habilitação explicitamente.
+mercadopago:
+  enabled: false
+  access-token: ""
+  webhook:
+    enabled: false

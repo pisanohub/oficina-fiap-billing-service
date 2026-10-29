@@ -15,6 +15,8 @@ class EntradaLocalDesabilitadaTest {
 
     @Test
     void rotaDeDesenvolvimentoNaoExisteSemPerfilLocal() throws Exception {
+        mvc.perform(post("/webhooks/mercadopago").contentType("application/json").content("{}"))
+                .andExpect(status().isNotFound());
         mvc.perform(get("/internal/orcamentos/11111111-1111-4111-8111-111111111111")).andExpect(status().isNotFound());
         mvc.perform(post("/internal/orcamentos").contentType("application/json").content("{}"))
                 .andExpect(status().isNotFound());
