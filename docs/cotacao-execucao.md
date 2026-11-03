@@ -195,7 +195,11 @@ para a futura entrada compartilhada. Nenhuma fila ou recurso AWS é criado.
 `.\mvnw.cmd clean verify` em Java 21. Inclui HTTP local simulado **com adapter real** e
 persistência H2, validação da resposta, snapshot, erro sanitizado, concorrência com preços
 diferentes, rollback de metadados e preservação das rotas de pagamento/webhook existentes.
-Não prova PostgreSQL real nem o serviço do colega: a integração manual continua pendente.
+Esses testes automatizados não provam PostgreSQL real nem o serviço do colega por si só.
+**Atualização manual em 03/11/2026:** Ramos confirmou cotação com Execução local, total de
+186.00 BRL, repetição compatível, conflito ao mudar quantidade e consulta ao PostgreSQL.
+Os cenários manuais adicionais de troca de preço/indisponibilidade foram sugeridos, mas
+ainda não tiveram execução confirmada. Veja o [status consolidado](fluxo-de-negocio.md#validacoes).
 
 Resultado registrado em **03/11/2026**: Java 21, `clean verify`, **181 testes aprovados**,
 sem falhas/erros/ignorados, cobertura de linhas **98,44% (693/704)** e gate de 80% aprovado.

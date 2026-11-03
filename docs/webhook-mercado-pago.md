@@ -1,5 +1,9 @@
 # Webhook Mercado Pago — quarta etapa do Billing
 
+**Status atualizado:** o teste no simulador do Mercado Pago retornou 200 e Ramos confirmou
+no banco a inbox como `PROCESSADO` e o pagamento aprovado. Isso valida a entrega/processamento
+local, não a Saga completa ou o deploy. Veja o [guia consolidado](fluxo-de-negocio.md).
+
 ## O que mudou e por quê
 
 Antes, o teste 6 do Postman iniciava a consulta manual do pagamento. Agora um aviso

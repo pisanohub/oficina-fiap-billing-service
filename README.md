@@ -2,11 +2,19 @@
 
 Microsserviço de cobrança da Fase 4 (Tech Challenge — Arquitetura de Software, FIAP).
 
+## Guia para integrar com o Billing
+
+Comece pelo [fluxo de negócio e guia de integração](docs/fluxo-de-negocio.md): responsabilidades,
+rotas, exemplos, estados, resultados dos testes e o que ainda precisa ser combinado para a Saga.
+**Cotação, checkout, pagamento e webhook foram validados em etapas locais; a integração SQS
+com o OS e o fluxo completo em Kubernetes ainda não estão concluídos.**
+
 ## Primeira etapa: orçamento local
 
 Já é possível gerar, calcular e consultar orçamento no banco do Billing, com validação
 de itens e proteção contra repetição de comando. Os preços ficam registrados como snapshot.
-O status inicial é `AGUARDANDO_APROVACAO`; ainda não há cobrança nem aprovação implementadas.
+O status inicial é `AGUARDANDO_APROVACAO`. Esta entrada apenas gera orçamento; aprovação
+de negócio permanece pendente e a integração de pagamento está descrita nas etapas seguintes.
 
 ## Segunda etapa: Checkout Pro / Preferences API
 
@@ -36,7 +44,8 @@ Reimporte a collection e preencha `pagamentoId` com o número da operação do c
 e `orcamentoId` com o orçamento correspondente. Execute **6 - Verificar na API e registrar
 pagamento** e **7 - Listar pagamentos**. Reutiliza as variáveis de ambiente da etapa 2.
 `confirmado=true` indica pagamento aprovado sem estorno na resposta validada.
-Não altera a OS nem publica SQS; webhook e fluxo da Saga continuam pendentes.
+Não altera a OS nem publica SQS. O webhook está implementado na quarta etapa; a integração
+do Billing com a Saga continua pendente.
 
 Estrutura em camadas: `domain/model`, `application/usecase`, `application/port/out`,
 `adapter/out/persistence`, `adapter/in/web` e `config`.
@@ -44,8 +53,9 @@ Detalhes e contratos pendentes: [Primeira etapa](docs/primeira-etapa-orcamentos.
 
 ## Responsabilidade
 
-Geração e envio de orçamentos para aprovação, registro e verificação de pagamentos
-integrados ao Mercado Pago, e aviso ao OS Service após o pagamento ser processado.
+Responsabilidade prevista: geração/envio de orçamentos para aprovação, registro e verificação
+de pagamentos no Mercado Pago e aviso ao OS Service. **Implementado hoje:** orçamento,
+cotação, checkout, consulta e webhook; envio para aprovação e aviso ao OS por SQS ainda pendentes.
 
 Faz parte do fluxo da Saga orquestrada pelo OS Service (abertura da OS → geração de
 orçamento → aprovação → pagamento → execução). Ver `documentacao/divisao-tarefas-fase4.md`
@@ -57,15 +67,15 @@ para o contexto arquitetural completo e o diagrama de sequência da Saga.
 - Java 21
 - Spring Boot 4.0.5
   - Spring Web
-  - Spring WebFlux (`WebClient`, para a futura integração com o Mercado Pago)
+  - Spring WebFlux (`WebClient`, integrações HTTP com Mercado Pago e Execução)
   - Spring Data JPA
   - Spring Validation
   - Spring Actuator
 - PostgreSQL (driver `org.postgresql:postgresql`)
 - Lombok
 - springdoc-openapi (Swagger UI)
-- AWS SDK v2 — Amazon SQS (mensageria da Saga)
-- Resilience4j (Circuit Breaker nas chamadas síncronas)
+- AWS SDK v2 — Amazon SQS (dependência disponível; entrada/saída da Saga ainda pendentes)
+- Resilience4j (dependência disponível; política de circuit breaker ainda não aplicada aos adapters)
 - JaCoCo (cobertura de testes)
 - Maven Wrapper
 
@@ -212,12 +222,14 @@ dos colegas, não faz cobrança e não reserva estoque.
 
 ## Status
 
-**Primeira etapa de orçamento implementada sobre o esqueleto do Pedro.**
-A geração/consulta local já funciona. Integrações externas continuam pendentes:
+**Orçamento/cotação, checkout, consulta de pagamento e webhook implementados sobre o esqueleto do Pedro.**
+Integração local com Execução/PostgreSQL e pagamentos/webhook em ambiente de teste foram
+confirmados por Ramos. Consulte o [guia consolidado](docs/fluxo-de-negocio.md#validacoes)
+para distinguir teste manual de cobertura automatizada. Permanecem pendentes:
 
-- Aprovação/reprovação, revisões e cancelamento; domínio de pagamento e estorno.
+- Aprovação/reprovação, revisões e cancelamento; solicitação de estorno/compensações.
 - Reconciliação operacional e reembolso no Mercado Pago. Preferência, consulta manual e
-  webhook autenticado com inbox já possuem implementação; validação externa é manual.
+  webhook autenticado com inbox já possuem implementação e validação manual no ambiente de teste.
 - Publicação/consumo das filas SQS da Saga (comandos `GerarOrcamento` /
   `ProcessarPagamento`, eventos `OrcamentoGerado` / `PagamentoConfirmado` /
   `PagamentoRecusado` / `PagamentoEstornado`).
@@ -227,7 +239,9 @@ A geração/consulta local já funciona. Integrações externas continuam penden
   concorrente do mesmo orçamento.
 - Sonar/qualidade no CI, migrações versionadas do schema e observabilidade distribuída,
   a integrar com o padrão da equipe.
-- Deploy automatizado no pipeline (`.github/workflows/ci.yml` hoje só builda e testa).
+- Validação do deploy integrado, variáveis/secrets e conectividade no ambiente da equipe.
+  Já existe `.github/workflows/deploy.yml`, adicionado no PR #5; não confundir existência
+  do workflow com prova de implantação/integração funcionando.
 
 Os arquivos de planejamento citados acima não foram encontrados na `main` do projeto
 principal durante esta implementação. Foram consideradas as decisões de 15/10 e os
