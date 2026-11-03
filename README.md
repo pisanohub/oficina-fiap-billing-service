@@ -190,6 +190,26 @@ Passo a passo e limites: [Webhook Mercado Pago](docs/webhook-mercado-pago.md).
 **200 é recebimento do aviso, não confirmação financeira**; confira também a inbox e o pagamento.
 Não altera a OS nem publica eventos da Saga neste incremento.
 
+## Quinta etapa: preços consultados no Execução
+
+A nova entrada **somente local** `POST /internal/orcamentos/cotados` recebe IDs/tipos e
+quantidades, consulta `POST /api/v1/cotacoes` no Execução e grava preços/nomes congelados
+no orçamento. Repetição do comando devolve o snapshot original sem recotar.
+
+Habilitação: `EXECUCAO_COTACAO_ENABLED=true` e `EXECUCAO_BASE_URL` com a URL raiz acessível
+do Execução (ex.: `http://127.0.0.1:8080` se ele estiver rodando localmente). Timeout padrão
+5s; integração desabilitada por padrão. Não precisa de token Mercado Pago para gerar orçamento.
+
+No IntelliJ: Java 21, **Active profiles: `local`**, Billing na porta 8082, sem túnel público.
+Use a [collection específica](docs/billing-cotacao.postman_collection.json) e o
+[passo a passo](docs/cotacao-execucao.md). A rota anterior de preços manuais permanece
+apenas para compatibilidade com os testes de desenvolvimento; não é entrada confiável de produção.
+
+Guardamos a versão do diagnóstico informada e a data da cotação em `orcamento_cotacoes`.
+Isso **não** implementa revisão/aprovação automática nem define o envelope SQS da Saga;
+precisamos alinhar esses contratos com o responsável pelo OS. Não altera pipeline/infra
+dos colegas, não faz cobrança e não reserva estoque.
+
 ## Status
 
 **Primeira etapa de orçamento implementada sobre o esqueleto do Pedro.**
