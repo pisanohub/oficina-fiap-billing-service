@@ -23,6 +23,12 @@ management:
         enabled: true
       show-details: always
 
+execucao:
+  cotacao:
+    enabled: ${EXECUCAO_COTACAO_ENABLED:false}
+    base-url: ${EXECUCAO_BASE_URL:}
+    timeout: ${EXECUCAO_COTACAO_TIMEOUT:5s}
+
 mercadopago:
   enabled: ${MERCADOPAGO_ENABLED:false}
   access-token: ${MERCADOPAGO_ACCESS_TOKEN:}

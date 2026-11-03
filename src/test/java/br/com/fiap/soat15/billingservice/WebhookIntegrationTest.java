@@ -113,6 +113,8 @@ class WebhookIntegrationTest {
         assertThat(contagem()).isZero(); verifyNoInteractions(gateway);
     }
     @Test void perfilDeDemonstracaoNaoExpoeSwaggerOuRotasLocais() throws Exception {
+        mvc.perform(post("/internal/orcamentos/cotados").contentType("application/json").content("{}"))
+                .andExpect(status().isNotFound());
         mvc.perform(get("/v3/api-docs")).andExpect(status().isNotFound());
         mvc.perform(get("/swagger-ui.html")).andExpect(status().isNotFound());
         mvc.perform(post("/internal/orcamentos").contentType("application/json").content("{}"))
