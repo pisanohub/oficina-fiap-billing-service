@@ -18,6 +18,7 @@
 	<properties>
 		<java.version>21</java.version>
 		<awssdk.version>2.46.7</awssdk.version>
+		<sonar.organization>pisanohub</sonar.organization>
 	</properties>
 
 	<dependencyManagement>
