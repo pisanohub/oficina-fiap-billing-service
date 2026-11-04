@@ -36,7 +36,7 @@ Ele aceita preços de teste e não possui JWT; não habilitar perfil local no Ku
 O bind é 127.0.0.1:8082; o teste verifica ausência das rotas sem esse perfil.
 
 1. Souza: payloads, correlação, comandoId/operationId, aprovação e revisão de orçamento.
-2. Guilherme: preços confiáveis via consulta REST ou snapshot confiável no comando.
+2. Origem do preço resolvida pelo ADR-P4: snapshot capturado pelo OS na adição do item e enviado no comando, sem REST Billing → Execução. Campos/envelope ainda precisam de acordo com Souza.
 3. Pedro: banco/usuário Billing, filas/permissões, migrações e padrão de qualidade/deploy.
 4. Grupo: modalidade Mercado Pago, confirmação, pendência, reembolso e idempotência financeira.
 

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Billing - orçamento local",
-    "description": "Perfil local, sem AWS/JWT. Requisições 1-3 testam orçamento. A requisição 4 chama Mercado Pago somente com MERCADOPAGO_ENABLED=true e token de Teste configurado no backend. Criar checkout não confirma pagamento.",
+    "description": "Perfil local, sem AWS/JWT, simula snapshot de preços recebido do OS conforme ADR-P4; não é API pública nem envelope SQS. Requisições 1-3 geram sem chamar Execução. A requisição 4 chama Mercado Pago somente com MERCADOPAGO_ENABLED=true e token de Teste no backend. Criar checkout não confirma pagamento.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
