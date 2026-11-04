@@ -7,6 +7,7 @@ import br.com.fiap.soat15.billingservice.domain.model.Orcamento;
 import java.time.Clock;
 import java.util.UUID;
 
+/** Gera orçamento exclusivamente com o snapshot recebido (ADR-P4), sem portas de cotação/HTTP. */
 public class GerarOrcamentoUseCase {
     private final OrcamentoRepository repository;
     private final Clock clock;

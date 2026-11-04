@@ -3,7 +3,7 @@ package br.com.fiap.soat15.billingservice.domain.model;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-/** Snapshot do catálogo: mudanças posteriores de preço não alteram o orçamento. */
+/** Snapshot capturado pelo OS e recebido no comando: o Billing não consulta o catálogo. */
 public record ItemOrcamento(String referencia, TipoItem tipo, String descricao,
                             int quantidade, BigDecimal valorUnitario) {
     public ItemOrcamento {

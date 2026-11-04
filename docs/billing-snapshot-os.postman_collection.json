@@ -1,0 +1,44 @@
+{
+  "info":{"name":"Billing - Snapshot do OS (ADR-P4)","schema":"https://schema.getpostman.com/json/collection/v2.1.0/collection.json","description":"Perfil local, apenas geração com preços recebidos. Simula comando interno autorizado do OS; não define envelope SQS nem API pública. Não chama Execução/Mercado Pago e não cobra. Guia: docs/snapshot-precos-os.md."},
+  "auth":{"type":"noauth"},
+  "variable":[
+    {"key":"baseUrl","value":"http://127.0.0.1:8082"},
+    {"key":"snapshotComandoId","value":"44444444-4444-4444-8444-444444444444"},
+    {"key":"snapshotOrcamentoId","value":""},
+    {"key":"snapshotAnterior","value":""}
+  ],
+  "item":[
+    {
+      "name":"1 - Gerar com snapshot do OS (repetir mantém ID e preços)",
+      "request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/internal/orcamentos",
+        "body":{"mode":"raw","raw":"{\n  \"comandoId\":\"{{snapshotComandoId}}\",\n  \"ordemId\":123,\n  \"clienteId\":1,\n  \"itens\":[\n    {\"referencia\":\"filtro-oleo\",\"tipo\":\"PECA\",\"descricao\":\"Filtro de óleo\",\"quantidade\":2,\"valorUnitario\":45.50},\n    {\"referencia\":\"troca-oleo\",\"tipo\":\"SERVICO\",\"descricao\":\"Troca de óleo\",\"quantidade\":1,\"valorUnitario\":95.00}\n  ]\n}","options":{"raw":{"language":"json"}}}},
+      "event":[{"listen":"test","script":{"type":"text/javascript","exec":[
+        "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+        "if (pm.response.code === 200) {",
+        " const b=pm.response.json();",
+        " pm.test('Total e preços do snapshot',()=>{pm.expect(b.total).to.eql(186);pm.expect(b.moeda).to.eql('BRL');pm.expect(b.itens[0].valorUnitario).to.eql(45.5);pm.expect(b.itens[1].valorUnitario).to.eql(95);});",
+        " const anterior=pm.collectionVariables.get('snapshotAnterior');",
+        " if(anterior){const p=JSON.parse(anterior);if(p.comandoId===b.comandoId)pm.test('Repetição preserva ID e snapshot',()=>{pm.expect(b.id).to.eql(p.id);pm.expect(b.itens).to.deep.eql(p.itens);pm.expect(b.total).to.eql(p.total);});}",
+        " pm.collectionVariables.set('snapshotOrcamentoId',b.id);pm.collectionVariables.set('snapshotAnterior',JSON.stringify(b));",
+        "}"
+      ]}}]
+    },
+    {
+      "name":"2 - Consultar salvo",
+      "request":{"method":"GET","url":"{{baseUrl}}/internal/orcamentos/{{snapshotOrcamentoId}}"},
+      "event":[{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('HTTP 200',()=>pm.response.to.have.status(200));","if(pm.response.code===200)pm.test('Orçamento persistido',()=>{const b=pm.response.json();pm.expect(b.id).to.eql(pm.collectionVariables.get('snapshotOrcamentoId'));pm.expect(b.total).to.eql(186);});"]}}]
+    },
+    {
+      "name":"3 - Mesmo comando com preço diferente (rode 1 antes)",
+      "request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/internal/orcamentos",
+        "body":{"mode":"raw","raw":"{\"comandoId\":\"{{snapshotComandoId}}\",\"ordemId\":123,\"clienteId\":1,\"itens\":[{\"referencia\":\"filtro-oleo\",\"tipo\":\"PECA\",\"descricao\":\"Filtro de óleo\",\"quantidade\":2,\"valorUnitario\":50.50},{\"referencia\":\"troca-oleo\",\"tipo\":\"SERVICO\",\"descricao\":\"Troca de óleo\",\"quantidade\":1,\"valorUnitario\":95.00}]}","options":{"raw":{"language":"json"}}}},
+      "event":[{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Não sobrescreve snapshot: 409',()=>pm.response.to.have.status(409));"]}}]
+    },
+    {
+      "name":"4 - Snapshot sem preço (não completa pelo catálogo)",
+      "request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/internal/orcamentos",
+        "body":{"mode":"raw","raw":"{\"comandoId\":\"{{$guid}}\",\"ordemId\":123,\"clienteId\":1,\"itens\":[{\"referencia\":\"filtro-oleo\",\"tipo\":\"PECA\",\"descricao\":\"Filtro\",\"quantidade\":1}]}","options":{"raw":{"language":"json"}}}},
+      "event":[{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Preço obrigatório: 400',()=>pm.response.to.have.status(400));"]}}]
+    }
+  ]
+}

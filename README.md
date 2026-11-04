@@ -1,249 +1,129 @@
 # Billing Service
 
-Microsserviço de cobrança da Fase 4 (Tech Challenge — Arquitetura de Software, FIAP).
+Microsserviço de orçamento/pagamento da Oficina FIAP — Tech Challenge Fase 4.
 
-## Guia para integrar com o Billing
+## Decisão atual: ADR-P4 — preço vem no comando do OS
 
-Comece pelo [fluxo de negócio e guia de integração](docs/fluxo-de-negocio.md): responsabilidades,
-rotas, exemplos, estados, resultados dos testes e o que ainda precisa ser combinado para a Saga.
-**Cotação, checkout, pagamento e webhook foram validados em etapas locais; a integração SQS
-com o OS e o fluxo completo em Kubernetes ainda não estão concluídos.**
+O **OS captura o preço ao adicionar o item à OS** e envia esse snapshot em `GerarOrcamento`.
+O Billing valida, calcula e salva com esses valores, **sem consultar o Execução**.
+Alteração posterior do catálogo não muda o snapshot recebido.
 
-## Primeira etapa: orçamento local
+Referência: [ADR-P4 do grupo](https://github.com/pisanohub/oficina_fiap/blob/main/documentacao/decisoes-fase4/ADR-P4-saga-orquestrada.md).
+O caminho REST de cotação do PR #6 foi retirado. Seu teste permanece como histórico,
+não como orientação arquitetural atual. Pagamento e webhook são reaproveitados.
 
-Já é possível gerar, calcular e consultar orçamento no banco do Billing, com validação
-de itens e proteção contra repetição de comando. Os preços ficam registrados como snapshot.
-O status inicial é `AGUARDANDO_APROVACAO`. Esta entrada apenas gera orçamento; aprovação
-de negócio permanece pendente e a integração de pagamento está descrita nas etapas seguintes.
+## Guias para o grupo
 
-## Segunda etapa: Checkout Pro / Preferences API
+- [Fluxo de negócio e integração](docs/fluxo-de-negocio.md): responsabilidades e pendências.
+- [Snapshot de preços do OS — ADR-P4](docs/snapshot-precos-os.md): entrada, teste, repetição e compatibilidade.
+- [Collection de snapshot](docs/billing-snapshot-os.postman_collection.json).
+- [Checkout Pro](docs/mercado-pago-checkout-pro.md), [confirmação de pagamento](docs/confirmacao-pagamento.md) e [webhook](docs/webhook-mercado-pago.md).
+- [Collection original de orçamento/checkout/pagamento](docs/billing-local.postman_collection.json): continua compatível.
+- [Histórico da cotação REST retirada](docs/cotacao-execucao.md): não usar como instrução ativa.
 
-É possível criar uma preferência a partir do orçamento salvo, persistir o ID/link e
-reutilizar o resultado sem novo envio. Geração de checkout **não confirma pagamento**.
-Os POST/GET `/internal/orcamentos/{id}/preferencia` só existem no perfil `local`.
+## O que está implementado
 
-Passo a passo completo: [Integração Mercado Pago](docs/mercado-pago-checkout-pro.md).
+- Orçamento com nomes/preços recebidos no comando interno; total exato em BRL e persistência PostgreSQL.
+- Snapshot imutável; comando compatível repetido devolve o mesmo orçamento; conteúdo diferente com a mesma chave dá 409.
+- Geração/consulta local sem Execução, DynamoDB, SQS ou AWS.
+- Preferência de Checkout Pro, consulta de pagamento e persistência financeira validada.
+- Webhook HMAC, inbox persistente, worker, recuperação/retries limitados e idempotência.
 
-Na configuração do IntelliJ, mantenha Java 21, campo **Active profiles** como `local` e adicione
-as variáveis de ambiente `MERCADOPAGO_ENABLED=true` e `MERCADOPAGO_ACCESS_TOKEN` com
-o token do ambiente **Teste**. O token não deve ser colocado no Postman nem no código.
-A habilitação é falsa por padrão; o orçamento local segue funcionando sem credencial.
+**Ainda não há entrada/saída SQS do Billing, aprovação/revisão completa, solicitação de
+reembolso ou Saga fim a fim validada.** O comando Java interno não define unilateralmente
+o JSON compartilhado: envelope, IDs, correlação e versões dependem de acordo com Souza.
 
-Reimporte a collection e execute **4 - Criar preferência** e **5 - Consultar estado**.
-O POST não recebe preço no corpo. Um resultado incerto bloqueia novas tentativas até
-reconciliação; não há retry automático. A confirmação manual está descrita na etapa seguinte.
+Receber preço por um canal interno confiável do OS é diferente de aceitar preços de uma
+API pública. O adapter definitivo deve autenticar/autorizar a origem; a entrada local
+serve somente para simular o comando, sem JWT.
 
-## Terceira etapa: verificar e registrar pagamento
+## Rodar localmente
 
-O Billing consulta a operação na API do Mercado Pago, confere orçamento/valor/moeda
-e registra o resultado em `pagamentos`, sem duplicar a mesma operação. A consulta
-reconhece aprovação, pendência, recusa e estorno; não realiza nova cobrança ou reembolso.
-
-Guia: [Confirmação de pagamento](docs/confirmacao-pagamento.md).
-Reimporte a collection e preencha `pagamentoId` com o número da operação do checkout
-e `orcamentoId` com o orçamento correspondente. Execute **6 - Verificar na API e registrar
-pagamento** e **7 - Listar pagamentos**. Reutiliza as variáveis de ambiente da etapa 2.
-`confirmado=true` indica pagamento aprovado sem estorno na resposta validada.
-Não altera a OS nem publica SQS. O webhook está implementado na quarta etapa; a integração
-do Billing com a Saga continua pendente.
-
-Estrutura em camadas: `domain/model`, `application/usecase`, `application/port/out`,
-`adapter/out/persistence`, `adapter/in/web` e `config`.
-Detalhes e contratos pendentes: [Primeira etapa](docs/primeira-etapa-orcamentos.md).
-
-## Responsabilidade
-
-Responsabilidade prevista: geração/envio de orçamentos para aprovação, registro e verificação
-de pagamentos no Mercado Pago e aviso ao OS Service. **Implementado hoje:** orçamento,
-cotação, checkout, consulta e webhook; envio para aprovação e aviso ao OS por SQS ainda pendentes.
-
-Faz parte do fluxo da Saga orquestrada pelo OS Service (abertura da OS → geração de
-orçamento → aprovação → pagamento → execução). Ver `documentacao/divisao-tarefas-fase4.md`
-e `documentacao/event-storming-saga-v1.md` no repositório principal (`oficina_fiap`)
-para o contexto arquitetural completo e o diagrama de sequência da Saga.
-
-## Tecnologias
-
-- Java 21
-- Spring Boot 4.0.5
-  - Spring Web
-  - Spring WebFlux (`WebClient`, integrações HTTP com Mercado Pago e Execução)
-  - Spring Data JPA
-  - Spring Validation
-  - Spring Actuator
-- PostgreSQL (driver `org.postgresql:postgresql`)
-- Lombok
-- springdoc-openapi (Swagger UI)
-- AWS SDK v2 — Amazon SQS (dependência disponível; entrada/saída da Saga ainda pendentes)
-- Resilience4j (dependência disponível; política de circuit breaker ainda não aplicada aos adapters)
-- JaCoCo (cobertura de testes)
-- Maven Wrapper
-
-## Como rodar localmente
-
-Pré-requisitos: Java 21. Os testes usam H2 e não precisam de banco externo nem AWS.
-Para testar manualmente, use Docker Desktop com motor Linux ou PostgreSQL local.
-
-```bash
-./mvnw clean verify      # Linux/macOS
-mvnw.cmd clean verify    # Windows
-```
-
-### Banco local e aplicação (PowerShell)
-
-Com Docker Desktop aberto, execute na pasta do repositório:
+Pré-requisitos: Java 21 e Docker Desktop com motor Linux. Na pasta do Billing:
 
 ```powershell
 docker compose up -d --wait billing-db
-```
-
-Em outro terminal, na mesma pasta:
-
-```powershell
 .\mvnw.cmd spring-boot:run '-Dspring-boot.run.profiles=local'
 ```
 
-Alternativa após `clean verify`:
+No IntelliJ: Java 21 e **Active profiles: `local`**. Alternativamente, pode usar
+`--spring.profiles.active=local` em Program arguments, sem duplicar a configuração.
 
-```powershell
-java -jar .\target\billing-service-0.0.1-SNAPSHOT.jar --spring.profiles.active=local
+Billing: `127.0.0.1:8082`. PostgreSQL: `127.0.0.1:5543`, database `billing_service`,
+usuário/senha de desenvolvimento `billing_local`. Variáveis `SPRING_DATASOURCE_*`
+sobrescrevem esses padrões. Health: `http://127.0.0.1:8082/actuator/health`;
+Swagger local: `http://127.0.0.1:8082/swagger-ui.html`.
+
+**Não habilitar `local` no Kubernetes nem expor 8082 em túnel.** As rotas `/internal`
+não autenticam o OS e não são o contrato público/de mensageria de produção.
+
+## Gerar com snapshot — exemplo local, não envelope SQS
+
+```http
+POST http://127.0.0.1:8082/internal/orcamentos
+Content-Type: application/json
 ```
-
-No IntelliJ, abra o `pom.xml`, selecione JDK 21 e adicione
-`--spring.profiles.active=local` em **Program arguments** de `BillingServiceApplication`.
-
-O perfil local usa `127.0.0.1:8082` e PostgreSQL em `127.0.0.1:5543`, database
-`billing_service`, usuário/senha `billing_local`. São credenciais fictícias de desenvolvimento.
-Variáveis `SPRING_DATASOURCE_*` já existentes sobrescrevem esses valores: confira-as
-se o aplicativo tentar acessar outro banco.
-
-Para Linux/macOS:
-
-```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
-```
-
-Variáveis de ambiente (padrões abaixo para execução SEM perfil local):
-
-| Variável | Padrão |
-|---|---|
-| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/billing_service` |
-| `SPRING_DATASOURCE_USERNAME` | `postgres` |
-| `SPRING_DATASOURCE_PASSWORD` | `postgres` |
-| `MERCADOPAGO_ACCESS_TOKEN` | *(vazio)* |
-
-No perfil local, Swagger: `http://127.0.0.1:8082/swagger-ui.html`;
-health: `http://127.0.0.1:8082/actuator/health`.
-
-### Testar pelo Postman
-
-Importe [a collection](docs/billing-local.postman_collection.json) e execute na ordem.
-Ela salva o ID retornado para a consulta seguinte. Para testar manualmente:
-
-- **POST** `http://127.0.0.1:8082/internal/orcamentos`
-- **Authorization:** No Auth
-- **Body → raw → JSON:**
 
 ```json
 {
-  "comandoId": "11111111-1111-4111-8111-111111111111",
-  "ordemId": 1,
-  "clienteId": 1,
-  "itens": [
-    {"referencia":"oleo","tipo":"PECA","descricao":"Óleo","quantidade":2,"valorUnitario":49.90},
-    {"referencia":"mao-obra","tipo":"SERVICO","descricao":"Troca de óleo","quantidade":1,"valorUnitario":100.00}
+  "comandoId":"44444444-4444-4444-8444-444444444444",
+  "ordemId":123,
+  "clienteId":1,
+  "itens":[
+    {"referencia":"filtro-oleo","tipo":"PECA","descricao":"Filtro de óleo","quantidade":2,"valorUnitario":45.50},
+    {"referencia":"troca-oleo","tipo":"SERVICO","descricao":"Troca de óleo","quantidade":1,"valorUnitario":95.00}
   ]
 }
 ```
 
-Esperado: HTTP 200, UUID do orçamento, status `AGUARDANDO_APROVACAO`, moeda `BRL` e
-total `199.80`. Consulte com **GET** `/internal/orcamentos/{id}`.
-Repetir a criação mantém o mesmo ID. Mesma chave com outro conteúdo retorna 409;
-entrada inválida retorna 400; UUID não encontrado retorna 404.
-Use outro `comandoId` para uma nova operação.
+O Postman simula o snapshot do OS: esperado **186.00 BRL**, UUID `id`, itens e status
+`AGUARDANDO_APROVACAO`. Consulte com `GET /internal/orcamentos/{id}`. O preço vem do payload;
+o OS definitivo deve usar o preço capturado na adição do item, não um preço arbitrário do cliente.
 
-**A entrada HTTP é temporária e exclusiva do desenvolvimento**: aceita preços do teste
-e não possui JWT. Sem perfil `local`, as rotas não existem. Não habilite o perfil local
-no Kubernetes. A entrada definitiva depende dos contratos da Saga e de preços confiáveis
-obtidos do catálogo da Execução ou de um comando interno confiável.
+**Migração do teste anterior:** usar `/internal/orcamentos`, não `/internal/orcamentos/cotados`.
+Adapter, porta, configuração e rota de cotação foram removidos. A collection antiga foi retirada.
+`EXECUCAO_BASE_URL` / `EXECUCAO_COTACAO_*` não são mais utilizados; remova-os do IntelliJ.
+Não precisa manter Execução/DynamoDB ligados para gerar orçamento. Dados anteriores não foram apagados.
 
-### Testes, cobertura e encerramento
+## Mercado Pago e webhook
 
-Execute `.\mvnw.cmd clean verify`. O JaCoCo bloqueia o build abaixo de 80% de linhas
-do serviço, sem excluir domínio, casos de uso e adapters. Relatório HTML:
-`target/site/jacoco/index.html`; XML: `target/site/jacoco/jacoco.xml`.
-Os testes de integração usam H2 em modo PostgreSQL, incluindo concorrência de comandos.
-H2 não comprova integralmente PostgreSQL; o Compose permite o teste manual nesse banco.
+Para preferência/consulta financeira: `MERCADOPAGO_ENABLED=true` e `MERCADOPAGO_ACCESS_TOKEN`
+do ambiente correspondente. Para webhook: `MERCADOPAGO_WEBHOOK_ENABLED=true` e
+`MERCADOPAGO_WEBHOOK_SECRET`, além da integração financeira configurada.
+Integrações vêm desligadas por padrão; não precisa ligá-las para gerar orçamento.
 
-Evidência desta etapa (27/10/2026): **39 testes aprovados; 98,48% de linhas cobertas**.
-Detalhes e limitações: [resultado de validação](docs/primeira-etapa-orcamentos.md#resultado-registrado-em-27102026).
+Preferência `CRIADA` não é aprovação financeira. O Billing valida operação, referência
+externa, BRL e total antes de registrar o pagamento. Consultar não cobra/reembolsa.
+Pagamento aprovado não altera a OS ou aprova o orçamento automaticamente neste incremento.
 
-Para encerrar, use `Ctrl+C` no aplicativo e `docker compose stop billing-db`.
-Os dados ficam no volume local para a próxima execução.
+Para demonstrar webhook por HTTPS, usar somente `webhook-demo` na porta 8083, sem `local`.
+**200 do webhook significa aviso salvo, não pagamento aprovado.** Não divulgar tokens,
+segredo do webhook, credenciais reais ou prints completos de headers.
 
-## Quarta etapa: webhook autenticado e inbox durável
+## Arquitetura, testes e pipeline
 
-O Mercado Pago pode iniciar automaticamente a verificação do pagamento pela rota
-`POST /webhooks/mercadopago?data.id=...`. Validamos HMAC-SHA256 e timestamp; o aviso é
-salvo antes do HTTP 200. Um worker consulta a API e reutiliza as validações financeiras,
-com retries limitados e proteção contra duplicidade/queda durante o processamento.
+Camadas: domínio, casos de uso, portas, adapters e configuração. A geração depende apenas
+do repositório próprio e do relógio. WebClient continua nas integrações financeiras,
+não na geração de orçamento. Java 21, Spring Boot, JPA/PostgreSQL, Maven, JUnit e JaCoCo.
+AWS SDK SQS e Resilience4j são dependências disponíveis, não prova de consumidores/circuit breaker implementados.
 
-A rota é **desabilitada por padrão** e exige `MERCADOPAGO_WEBHOOK_ENABLED=true` e
-`MERCADOPAGO_WEBHOOK_SECRET`, além do token/integração já configurados. O segredo do
-webhook vem do painel, **não é** o Access Token. Não adicionar credenciais ao Git.
+```powershell
+.\mvnw.cmd clean verify
+```
 
-Para demonstrar por túnel HTTPS, use somente o perfil `webhook-demo` (porta 8083),
-sem `local`: as entradas internas de teste não ficam expostas. Não abra túnel para 8082.
-Nenhum túnel, recurso AWS ou deploy é iniciado automaticamente.
+Testes usam H2 e HTTP simulado. JaCoCo exige 80% de linhas; relatório em
+`target/site/jacoco/index.html`. Resultado ADR-P4 no guia de snapshot. Os 181 testes
+históricos incluíam cotação removida, não representam a suíte atual.
 
-Passo a passo e limites: [Webhook Mercado Pago](docs/webhook-mercado-pago.md).
-**200 é recebimento do aviso, não confirmação financeira**; confira também a inbox e o pagamento.
-Não altera a OS nem publica eventos da Saga neste incremento.
+CI/Sonar e deploy dos colegas não foram alterados nesta correção. **Merge em main pode
+disparar deploy**: coordenar com Pedro. Workflow existente não comprova integração fim a fim.
 
-## Quinta etapa: preços consultados no Execução
+## Pendências com a equipe
 
-A nova entrada **somente local** `POST /internal/orcamentos/cotados` recebe IDs/tipos e
-quantidades, consulta `POST /api/v1/cotacoes` no Execução e grava preços/nomes congelados
-no orçamento. Repetição do comando devolve o snapshot original sem recotar.
+- Souza: payload/envelope, IDs/correlação, autorização do canal, aprovação/revisão e validade de versões antigas.
+- OS/Execução: confirmar captura de preços no OS e atualizar referências antigas de cotação direta nos seus documentos.
+- Pedro: filas/permissões, banco, variáveis/secrets, migrações e validação do ambiente.
+- Billing: entrada/saída SQS após contrato, reembolso/reconciliação e testes integrados da Saga.
 
-Habilitação: `EXECUCAO_COTACAO_ENABLED=true` e `EXECUCAO_BASE_URL` com a URL raiz acessível
-do Execução (ex.: `http://127.0.0.1:8080` se ele estiver rodando localmente). Timeout padrão
-5s; integração desabilitada por padrão. Não precisa de token Mercado Pago para gerar orçamento.
-
-No IntelliJ: Java 21, **Active profiles: `local`**, Billing na porta 8082, sem túnel público.
-Use a [collection específica](docs/billing-cotacao.postman_collection.json) e o
-[passo a passo](docs/cotacao-execucao.md). A rota anterior de preços manuais permanece
-apenas para compatibilidade com os testes de desenvolvimento; não é entrada confiável de produção.
-
-Guardamos a versão do diagnóstico informada e a data da cotação em `orcamento_cotacoes`.
-Isso **não** implementa revisão/aprovação automática nem define o envelope SQS da Saga;
-precisamos alinhar esses contratos com o responsável pelo OS. Não altera pipeline/infra
-dos colegas, não faz cobrança e não reserva estoque.
-
-## Status
-
-**Orçamento/cotação, checkout, consulta de pagamento e webhook implementados sobre o esqueleto do Pedro.**
-Integração local com Execução/PostgreSQL e pagamentos/webhook em ambiente de teste foram
-confirmados por Ramos. Consulte o [guia consolidado](docs/fluxo-de-negocio.md#validacoes)
-para distinguir teste manual de cobertura automatizada. Permanecem pendentes:
-
-- Aprovação/reprovação, revisões e cancelamento; solicitação de estorno/compensações.
-- Reconciliação operacional e reembolso no Mercado Pago. Preferência, consulta manual e
-  webhook autenticado com inbox já possuem implementação e validação manual no ambiente de teste.
-- Publicação/consumo das filas SQS da Saga (comandos `GerarOrcamento` /
-  `ProcessarPagamento`, eventos `OrcamentoGerado` / `PagamentoConfirmado` /
-  `PagamentoRecusado` / `PagamentoEstornado`).
-- A contramedida de **Pessimistic View / Reread Value** na etapa de orçamento/pagamento
-  (ver nota da P7 em `documentacao/event-storming-saga-v1.md` do repositório principal),
-  para evitar condição de corrida entre a aprovação do cliente e um reprocessamento
-  concorrente do mesmo orçamento.
-- Sonar/qualidade no CI, migrações versionadas do schema e observabilidade distribuída,
-  a integrar com o padrão da equipe.
-- Validação do deploy integrado, variáveis/secrets e conectividade no ambiente da equipe.
-  Já existe `.github/workflows/deploy.yml`, adicionado no PR #5; não confundir existência
-  do workflow com prova de implantação/integração funcionando.
-
-Os arquivos de planejamento citados acima não foram encontrados na `main` do projeto
-principal durante esta implementação. Foram consideradas as decisões de 15/10 e os
-PDFs enviados pelo Gabriel; confirmar caminho/branch com Pedro. Nenhum recurso AWS
-é criado por esta etapa local.
+Para encerrar o teste local, pare o aplicativo e use `docker compose stop billing-db`.
+Não use `down -v` para preservar dados.
