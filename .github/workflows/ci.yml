@@ -48,4 +48,4 @@ jobs:
       - name: Build + Tests + SonarQube
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./mvnw clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=pisanohub_oficina-fiap-billing-service
+        run: ./mvnw clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=pisanohub_oficina-fiap-billing-service -Dsonar.qualitygate.wait=true
