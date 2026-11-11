@@ -1,0 +1,16 @@
+{
+  "messageId": "71269b90-225d-4d42-8447-323f9c0328e1",
+  "sagaId": "saga-os-123",
+  "comandoId": "c01d4a4a-66c1-4818-a7bb-c0d8fa42fd9e",
+  "ordemId": 123,
+  "clienteId": 1,
+  "itens": [
+    {
+      "referencia": "filtro",
+      "tipo": "PECA",
+      "descricao": "Filtro",
+      "quantidade": 2,
+      "valorUnitario": 45.5
+    }
+  ]
+}

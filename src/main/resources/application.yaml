@@ -1,3 +1,8 @@
+billing.orcamento-sqs.enabled: ${BILLING_ORCAMENTO_SQS_ENABLED:false}
+billing.orcamento-sqs.comandos-url: ${SQS_GERAR_ORCAMENTO_URL:}
+billing.orcamento-sqs.resultados-url: ${SQS_ORCAMENTO_RESPONDIDO_URL:}
+billing.orcamento-sqs.region: ${AWS_REGION:us-east-1}
+
 spring:
   application:
     name: billing-service
@@ -31,3 +36,4 @@ mercadopago:
     enabled: ${MERCADOPAGO_WEBHOOK_ENABLED:false}
     secret: ${MERCADOPAGO_WEBHOOK_SECRET:}
     tolerance: ${MERCADOPAGO_WEBHOOK_TOLERANCE:5m}
+
