@@ -1,0 +1,11 @@
+{
+  "type": "EstornarPagamento",
+  "messageId": "8f5ff823-6ae9-42a5-a625-976b1204150f",
+  "sagaId": "saga-os-123",
+  "comandoId": "7d615e04-a16c-425a-b38e-cb5383d492a4",
+  "ordemId": 123,
+  "clienteId": 1,
+  "orcamentoId": "544eb090-43ad-4b45-b9d6-d3e4ca8da341",
+  "versao": 2,
+  "pagamentoId": "186426882414"
+}

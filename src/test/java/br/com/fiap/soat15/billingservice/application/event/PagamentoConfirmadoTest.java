@@ -35,12 +35,22 @@ class PagamentoConfirmadoTest {
     }
 
     private PagamentoConfirmado evento(String status, String valor) {
+        return evento(status, valor, 2);
+    }
+
+    @Test
+    void rejeitaVersaoAusenteOuInvalida() {
+        assertThatIllegalArgumentException().isThrownBy(() -> evento("approved", "199.80", 0));
+        assertThatIllegalArgumentException().isThrownBy(() -> evento("approved", "199.80", -1));
+    }
+
+    private PagamentoConfirmado evento(String status, String valor, int versao) {
         var orcamento = new Orcamento(orcamentoId, UUID.randomUUID(), 123, 1,
                 List.of(new ItemOrcamento("servico", TipoItem.SERVICO, "Serviço", 1,
                         new BigDecimal("199.80"))), Instant.EPOCH);
         var dados = new PagamentoConsultado("186426882414", orcamentoId.toString(), status,
                 null, new BigDecimal(valor), "BRL", BigDecimal.ZERO, Instant.EPOCH);
         return PagamentoConfirmado.de(message, "saga-os-123", causa, comando,
-                orcamento, new Pagamento(orcamentoId, dados, Instant.EPOCH));
+                orcamento, versao, new Pagamento(orcamentoId, dados, Instant.EPOCH));
     }
 }

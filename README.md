@@ -15,7 +15,9 @@ não como orientação arquitetural atual. Pagamento e webhook são reaproveitad
 ## Guias para o grupo
 
 - [Fluxo de negócio e integração](docs/fluxo-de-negocio.md): responsabilidades e pendências.
+- [Pagamento/estorno na mesma fila](docs/comandos-pagamento-mesma-fila.md): type, resultados, outbox e habilitação opt-in.
 - [Snapshot de preços do OS — ADR-P4](docs/snapshot-precos-os.md): entrada, teste, repetição e compatibilidade.
+- [Orçamento via SQS](docs/orcamento-sqs.md): entrada gerar-orcamento, resposta plana, idempotência e habilitação.
 - [Collection de snapshot](docs/billing-snapshot-os.postman_collection.json).
 - [Checkout Pro](docs/mercado-pago-checkout-pro.md), [confirmação de pagamento](docs/confirmacao-pagamento.md) e [webhook](docs/webhook-mercado-pago.md).
 - [Collection original de orçamento/checkout/pagamento](docs/billing-local.postman_collection.json): continua compatível.
@@ -29,9 +31,13 @@ não como orientação arquitetural atual. Pagamento e webhook são reaproveitad
 - Preferência de Checkout Pro, consulta de pagamento e persistência financeira validada.
 - Webhook HMAC, inbox persistente, worker, recuperação/retries limitados e idempotência.
 
-**Ainda não há entrada/saída SQS do Billing, aprovação/revisão completa, solicitação de
-reembolso ou Saga fim a fim validada.** O comando Java interno não define unilateralmente
-o JSON compartilhado: envelope, IDs, correlação e versões dependem de acordo com Souza.
+Há entrada/saída SQS financeira opt-in: ProcessarPagamento e EstornarPagamento
+na mesma fila. A solicitação de estorno integral tem reserva durável e confirmação
+por consulta. Tudo permanece desligado por padrão e foi validado somente offline.
+O consumidor de gerar-orcamento e a resposta orcamento-respondido também estão
+implementados, com habilitação independente e testes offline.
+**Ainda falta validar a Saga fim a fim na AWS.**
+Os tipos/status de resultado precisam ser alinhados com o leitor do OS.
 
 Receber preço por um canal interno confiável do OS é diferente de aceitar preços de uma
 API pública. O adapter definitivo deve autenticar/autorizar a origem; a entrada local
@@ -105,7 +111,7 @@ segredo do webhook, credenciais reais ou prints completos de headers.
 Camadas: domínio, casos de uso, portas, adapters e configuração. A geração depende apenas
 do repositório próprio e do relógio. WebClient continua nas integrações financeiras,
 não na geração de orçamento. Java 21, Spring Boot, JPA/PostgreSQL, Maven, JUnit e JaCoCo.
-AWS SDK SQS e Resilience4j são dependências disponíveis, não prova de consumidores/circuit breaker implementados.
+AWS SDK SQS é usado pelo worker financeiro opt-in. Não presumir circuit breaker implementado pela dependência Resilience4j.
 
 ```powershell
 .\mvnw.cmd clean verify
@@ -123,7 +129,7 @@ disparar deploy**: coordenar com Pedro. Workflow existente não comprova integra
 - Souza: payload/envelope, IDs/correlação, autorização do canal, aprovação/revisão e validade de versões antigas.
 - OS/Execução: confirmar captura de preços no OS e atualizar referências antigas de cotação direta nos seus documentos.
 - Pedro: filas/permissões, banco, variáveis/secrets, migrações e validação do ambiente.
-- Billing: entrada/saída SQS após contrato, reembolso/reconciliação e testes integrados da Saga.
+- Billing: reconciliação operacional e testes integrados da Saga, após alinhar os contratos com o OS.
 
 Para encerrar o teste local, pare o aplicativo e use `docker compose stop billing-db`.
 Não use `down -v` para preservar dados.
