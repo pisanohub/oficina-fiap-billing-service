@@ -12,34 +12,20 @@ import software.amazon.awssdk.services.sqs.model.*;
 public class ComandosPagamentoWorker {
     private static final Logger LOG = LoggerFactory.getLogger(ComandosPagamentoWorker.class);
     private final SqsClient sqs;
-    private final String entrada;
+    private final EntregaSqs entrega;
     private final String saida;
     private final ProcessarComandoPagamentoUseCase processar;
     private final RegistroFinanceiro registro;
 
     public ComandosPagamentoWorker(SqsClient sqs, String entrada, String saida,
             ProcessarComandoPagamentoUseCase processar, RegistroFinanceiro registro) {
-        this.sqs = sqs; this.entrada = entrada; this.saida = saida;
+        this.sqs = sqs; this.saida = saida;
+        this.entrega = new EntregaSqs(sqs, entrada, 120);
         this.processar = processar; this.registro = registro;
     }
     @Scheduled(fixedDelayString = "${billing.sqs.poll-delay:3000}")
     public void consumir() {
-        try {
-            var mensagens = sqs.receiveMessage(ReceiveMessageRequest.builder().queueUrl(entrada)
-                    .maxNumberOfMessages(1).waitTimeSeconds(5).visibilityTimeout(120).build()).messages();
-            for (var m : mensagens) {
-                try {
-                    processar.executar(m.body());
-                    // Resultado já persistido na outbox; não depende do SendMessage.
-                    sqs.deleteMessage(DeleteMessageRequest.builder().queueUrl(entrada)
-                            .receiptHandle(m.receiptHandle()).build());
-                } catch (RuntimeException e) {
-                    LOG.warn("Comando financeiro não confirmado; mantido na fila para retry/DLQ.");
-                }
-            }
-        } catch (RuntimeException e) {
-            LOG.warn("Fila de comandos financeiros indisponível.");
-        }
+        entrega.consumir(processar::executar);
     }
     @Scheduled(fixedDelayString = "${billing.sqs.poll-delay:3000}")
     public void publicar() {

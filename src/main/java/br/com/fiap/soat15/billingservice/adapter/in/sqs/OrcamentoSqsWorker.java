@@ -10,28 +10,19 @@ import software.amazon.awssdk.services.sqs.model.*;
 public class OrcamentoSqsWorker {
     private static final Logger LOG = LoggerFactory.getLogger(OrcamentoSqsWorker.class);
     private final SqsClient sqs;
-    private final String entrada, saida;
+    private final String saida;
+    private final EntregaSqs entrega;
     private final ProcessarMensagemOrcamentoUseCase processar;
     private final RegistroMensagensOrcamento registro;
     public OrcamentoSqsWorker(SqsClient sqs, String entrada, String saida,
             ProcessarMensagemOrcamentoUseCase processar, RegistroMensagensOrcamento registro) {
-        this.sqs = sqs; this.entrada = entrada; this.saida = saida;
+        this.sqs = sqs; this.saida = saida;
+        this.entrega = new EntregaSqs(sqs, entrada, 60);
         this.processar = processar; this.registro = registro;
     }
     @Scheduled(fixedDelayString = "${billing.orcamento-sqs.poll-delay:3000}")
     public void consumir() {
-        try {
-            var mensagens = sqs.receiveMessage(ReceiveMessageRequest.builder().queueUrl(entrada)
-                    .maxNumberOfMessages(1).waitTimeSeconds(5).visibilityTimeout(60).build()).messages();
-            for (var m : mensagens) {
-                try {
-                    processar.executar(m.body());
-                    sqs.deleteMessage(DeleteMessageRequest.builder().queueUrl(entrada).receiptHandle(m.receiptHandle()).build());
-                } catch (RuntimeException e) {
-                    LOG.warn("Orçamento não confirmado; mensagem mantida para retry/DLQ.");
-                }
-            }
-        } catch (RuntimeException e) { LOG.warn("Fila de orçamento indisponível."); }
+        entrega.consumir(processar::executar);
     }
     @Scheduled(fixedDelayString = "${billing.orcamento-sqs.poll-delay:3000}")
     public void publicar() {
