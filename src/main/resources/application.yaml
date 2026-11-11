@@ -31,3 +31,10 @@ mercadopago:
     enabled: ${MERCADOPAGO_WEBHOOK_ENABLED:false}
     secret: ${MERCADOPAGO_WEBHOOK_SECRET:}
     tolerance: ${MERCADOPAGO_WEBHOOK_TOLERANCE:5m}
+
+billing:
+  sqs:
+    enabled: ${BILLING_SQS_ENABLED:false}
+    comandos-url: ${SQS_PROCESSAR_PAGAMENTO_URL:}
+    resultados-url: ${SQS_PAGAMENTO_CONFIRMADO_URL:}
+    region: ${AWS_REGION:us-east-1}

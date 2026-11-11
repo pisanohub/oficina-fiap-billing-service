@@ -6,15 +6,25 @@ import br.com.fiap.soat15.billingservice.domain.model.Pagamento;
 import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.UUID;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /** Corpo JSON plano da fila pagamento-confirmado. */
 public record PagamentoConfirmado(UUID messageId, String sagaId, UUID causationId,
-        UUID comandoId, long ordemId, long clienteId, UUID orcamentoId, String pagamentoId,
+        UUID comandoId, long ordemId, long clienteId, UUID orcamentoId, int versao, String pagamentoId,
         EstadoPagamento status, BigDecimal valor, String moeda) {
+
+    @JsonProperty("type")
+    public String type() { return "PagamentoConfirmado"; }
+
+    public PagamentoConfirmado {
+        if (versao <= 0) {
+            throw new IllegalArgumentException("A versão do orçamento aprovado deve ser positiva.");
+        }
+    }
 
     /** O chamador fornece o ID do evento e deve reutilizá-lo em republicações. */
     public static PagamentoConfirmado de(UUID messageId, String sagaId, UUID causationId,
-            UUID comandoId, Orcamento orcamento, Pagamento pagamento) {
+            UUID comandoId, Orcamento orcamento, int versao, Pagamento pagamento) {
         Objects.requireNonNull(messageId, "messageId do evento");
         Objects.requireNonNull(causationId, "messageId de ProcessarPagamento");
         Objects.requireNonNull(comandoId, "comandoId de ProcessarPagamento");
@@ -25,7 +35,7 @@ public record PagamentoConfirmado(UUID messageId, String sagaId, UUID causationI
             throw new IllegalArgumentException("Pagamento ou correlação incompatível com o orçamento.");
         }
         return new PagamentoConfirmado(messageId, sagaId, causationId, comandoId,
-                orcamento.ordemId(), orcamento.clienteId(), orcamento.id(), pagamento.dados().id(),
+                orcamento.ordemId(), orcamento.clienteId(), orcamento.id(), versao, pagamento.dados().id(),
                 pagamento.dados().estado(), pagamento.dados().valor(), pagamento.dados().moeda());
     }
 }
