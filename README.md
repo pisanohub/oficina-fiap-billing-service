@@ -17,6 +17,7 @@ não como orientação arquitetural atual. Pagamento e webhook são reaproveitad
 - [Fluxo de negócio e integração](docs/fluxo-de-negocio.md): responsabilidades e pendências.
 - [Pagamento/estorno na mesma fila](docs/comandos-pagamento-mesma-fila.md): type, resultados, outbox e habilitação opt-in.
 - [Snapshot de preços do OS — ADR-P4](docs/snapshot-precos-os.md): entrada, teste, repetição e compatibilidade.
+- [Orçamento via SQS](docs/orcamento-sqs.md): entrada gerar-orcamento, resposta plana, idempotência e habilitação.
 - [Collection de snapshot](docs/billing-snapshot-os.postman_collection.json).
 - [Checkout Pro](docs/mercado-pago-checkout-pro.md), [confirmação de pagamento](docs/confirmacao-pagamento.md) e [webhook](docs/webhook-mercado-pago.md).
 - [Collection original de orçamento/checkout/pagamento](docs/billing-local.postman_collection.json): continua compatível.
@@ -33,7 +34,9 @@ não como orientação arquitetural atual. Pagamento e webhook são reaproveitad
 Há entrada/saída SQS financeira opt-in: ProcessarPagamento e EstornarPagamento
 na mesma fila. A solicitação de estorno integral tem reserva durável e confirmação
 por consulta. Tudo permanece desligado por padrão e foi validado somente offline.
-**Ainda faltam o consumidor de gerar-orcamento e a Saga fim a fim na AWS.**
+O consumidor de gerar-orcamento e a resposta orcamento-respondido também estão
+implementados, com habilitação independente e testes offline.
+**Ainda falta validar a Saga fim a fim na AWS.**
 Os tipos/status de resultado precisam ser alinhados com o leitor do OS.
 
 Receber preço por um canal interno confiável do OS é diferente de aceitar preços de uma
@@ -126,7 +129,7 @@ disparar deploy**: coordenar com Pedro. Workflow existente não comprova integra
 - Souza: payload/envelope, IDs/correlação, autorização do canal, aprovação/revisão e validade de versões antigas.
 - OS/Execução: confirmar captura de preços no OS e atualizar referências antigas de cotação direta nos seus documentos.
 - Pedro: filas/permissões, banco, variáveis/secrets, migrações e validação do ambiente.
-- Billing: entrada/saída SQS de orçamento, reconciliação operacional e testes integrados da Saga.
+- Billing: reconciliação operacional e testes integrados da Saga, após alinhar os contratos com o OS.
 
 Para encerrar o teste local, pare o aplicativo e use `docker compose stop billing-db`.
 Não use `down -v` para preservar dados.

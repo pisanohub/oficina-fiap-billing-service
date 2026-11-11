@@ -6,7 +6,7 @@
 > O Billing valida, calcula e persiste esse snapshot, **sem consultar o Execução**.
 > Pagamento/webhook são reaproveitados; o worker financeiro SQS é opt-in.
 > Consulte [pagamento/estorno na mesma fila](comandos-pagamento-mesma-fila.md).
-> O fluxo SQS de orçamento e a validação fim a fim ainda estão pendentes.
+> O [fluxo SQS de orçamento](orcamento-sqs.md) também é opt-in; validação fim a fim ainda pendente.
 
 Referência: [ADR-P4](https://github.com/pisanohub/oficina_fiap/blob/main/documentacao/decisoes-fase4/ADR-P4-saga-orquestrada.md).
 O cabeçalho publicado ainda diz Proposta; Pedro confirmou a direção ao solicitar a correção.
@@ -40,10 +40,10 @@ Preço vindo do canal autorizado do OS não é equivalente a preço público arb
 | Passo | Ação | Situação |
 |---|---|---|
 | 1 | Adicionar itens em diagnóstico e capturar preço no OS | Responsabilidade do OS conforme ADR |
-| 2 | SolicitarOrcamento publica comando com snapshot | Envelope/entrada SQS do Billing pendentes |
+| 2 | SolicitarOrcamento publica comando com snapshot | Entrada SQS implementada opt-in; integração com OS a validar |
 | 3 | Billing lê snapshot, valida e calcula | Implementado; Postman simula comando local |
 | 4 | Salvar orçamento/itens no banco próprio | Implementado sem HTTP ao Execução |
-| 5 | Publicar OrcamentoGerado e OS reagir | Saída SQS/integração pendentes |
+| 5 | Publicar resultado e OS reagir | Resposta plana em orcamento-respondido, outbox opt-in; OS a validar |
 | 6 | Aprovação, pagamento e continuação da Saga | Checkout/consulta/webhook existem; aprovação/revisão e fluxo completo pendentes |
 
 ```mermaid
@@ -157,7 +157,8 @@ anterior continua compatível.
 | Snapshot sem HTTP ao Execução | Testes automatizados da correção; novo manual usa collection atual. |
 | Concorrência/validação e compatibilidade legada | Cobertura automatizada, não apresentar como novo teste manual PostgreSQL. |
 | SQS financeira e estorno integral | Implementados opt-in; testes offline, ainda sem validação integrada AWS. |
-| SQS de orçamento e aprovação/revisão completas | Pendentes. |
+| SQS de orçamento | Implementado opt-in; testes offline, integração com OS a validar. |
+| Aprovação/revisão completas e Saga na AWS | Pendentes de validação conjunta. |
 
 Os 181 testes históricos incluíam cotação removida; resultado atual no
 [guia de snapshot](snapshot-precos-os.md#validacao). Não refizemos pagamentos ou alteramos
