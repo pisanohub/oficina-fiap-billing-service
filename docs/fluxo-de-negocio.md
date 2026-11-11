@@ -4,7 +4,9 @@
 
 > O **OS captura o preço ao adicionar o item à OS** e o envia no comando de orçamento.
 > O Billing valida, calcula e persiste esse snapshot, **sem consultar o Execução**.
-> Pagamento/webhook são reaproveitados; entrada/saída SQS ainda dependem do contrato compartilhado.
+> Pagamento/webhook são reaproveitados; o worker financeiro SQS é opt-in.
+> Consulte [pagamento/estorno na mesma fila](comandos-pagamento-mesma-fila.md).
+> O fluxo SQS de orçamento e a validação fim a fim ainda estão pendentes.
 
 Referência: [ADR-P4](https://github.com/pisanohub/oficina_fiap/blob/main/documentacao/decisoes-fase4/ADR-P4-saga-orquestrada.md).
 O cabeçalho publicado ainda diz Proposta; Pedro confirmou a direção ao solicitar a correção.
@@ -118,8 +120,9 @@ Webhook valida assinatura/timestamp, salva inbox, responde 200; worker consulta 
 **200 = aviso salvo; PROCESSADO = aviso tratado; conferir estado/confirmado para saber se pagou.**
 
 Orçamento, preferência, situação financeira e estado da inbox são coisas diferentes.
-Reconhecer estorno do provedor não significa solicitar reembolso. Pagamento não altera a OS
-nem publica evento SQS automaticamente nesta etapa. Guias: [Checkout](mercado-pago-checkout-pro.md),
+O worker financeiro opt-in agora solicita estorno integral com idempotência e publica
+resultados via outbox; habilitação e tipos estão no novo guia. Não altera a OS diretamente.
+Guias: [Checkout](mercado-pago-checkout-pro.md),
 [pagamento](confirmacao-pagamento.md) e [webhook](webhook-mercado-pago.md).
 Para túnel de webhook, somente webhook-demo em 8083, sem local.
 
@@ -153,7 +156,8 @@ anterior continua compatível.
 | Cotação REST local de 186.00 BRL | Passou, mas é histórico do PR #6, caminho retirado. |
 | Snapshot sem HTTP ao Execução | Testes automatizados da correção; novo manual usa collection atual. |
 | Concorrência/validação e compatibilidade legada | Cobertura automatizada, não apresentar como novo teste manual PostgreSQL. |
-| Saga SQS, aprovação/revisão e solicitação de estorno | Pendentes. |
+| SQS financeira e estorno integral | Implementados opt-in; testes offline, ainda sem validação integrada AWS. |
+| SQS de orçamento e aprovação/revisão completas | Pendentes. |
 
 Os 181 testes históricos incluíam cotação removida; resultado atual no
 [guia de snapshot](snapshot-precos-os.md#validacao). Não refizemos pagamentos ou alteramos
