@@ -33,6 +33,11 @@ mercadopago:
     tolerance: ${MERCADOPAGO_WEBHOOK_TOLERANCE:5m}
 
 billing:
+  orcamento-sqs:
+    enabled: ${BILLING_ORCAMENTO_SQS_ENABLED:false}
+    comandos-url: ${SQS_GERAR_ORCAMENTO_URL:}
+    resultados-url: ${SQS_ORCAMENTO_RESPONDIDO_URL:}
+    region: ${AWS_REGION:us-east-1}
   sqs:
     enabled: ${BILLING_SQS_ENABLED:false}
     comandos-url: ${SQS_PROCESSAR_PAGAMENTO_URL:}
