@@ -73,6 +73,15 @@ jobs:
             --from-literal=OTEL_SERVICE_NAME="billing-service" \
             --from-literal=DEPLOYMENT_ENVIRONMENT="production" \
             --from-literal=OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="https://otlp.nr-data.net/v1/traces" \
+            --from-literal=SPRING_PROFILES_ACTIVE="local" \
+            --from-literal=MERCADOPAGO_ENABLED="true" \
+            --from-literal=AWS_REGION="us-east-1" \
+            --from-literal=BILLING_ORCAMENTO_SQS_ENABLED="true" \
+            --from-literal=SQS_GERAR_ORCAMENTO_URL="https://sqs.us-east-1.amazonaws.com/381492182695/gerar-orcamento" \
+            --from-literal=SQS_ORCAMENTO_RESPONDIDO_URL="https://sqs.us-east-1.amazonaws.com/381492182695/orcamento-respondido" \
+            --from-literal=BILLING_SQS_ENABLED="true" \
+            --from-literal=SQS_PROCESSAR_PAGAMENTO_URL="https://sqs.us-east-1.amazonaws.com/381492182695/processar-pagamento" \
+            --from-literal=SQS_PAGAMENTO_CONFIRMADO_URL="https://sqs.us-east-1.amazonaws.com/381492182695/pagamento-confirmado" \
             --namespace=${{ env.NAMESPACE }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
