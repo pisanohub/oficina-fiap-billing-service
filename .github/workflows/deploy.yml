@@ -74,6 +74,8 @@ jobs:
             --from-literal=DEPLOYMENT_ENVIRONMENT="production" \
             --from-literal=OTEL_EXPORTER_OTLP_TRACES_ENDPOINT="https://otlp.nr-data.net/v1/traces" \
             --from-literal=SPRING_PROFILES_ACTIVE="local" \
+            --from-literal=SERVER_ADDRESS="0.0.0.0" \
+            --from-literal=SERVER_PORT="8080" \
             --from-literal=MERCADOPAGO_ENABLED="true" \
             --from-literal=AWS_REGION="us-east-1" \
             --from-literal=BILLING_ORCAMENTO_SQS_ENABLED="true" \
